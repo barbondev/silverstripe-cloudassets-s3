@@ -20,6 +20,7 @@ class S3Bucket extends CloudBucket
 	const API_KEY     = 'ApiKey';
 	const API_SECRET  = 'ApiSecret';
 	const FORCE_DL    = 'ForceDownload';
+	const USE_ROLE    = 'UseRole';
 
 	protected $client;
 
@@ -33,13 +34,16 @@ class S3Bucket extends CloudBucket
 		parent::__construct($path, $cfg);
 		if (empty($cfg[self::CONTAINER]))  throw new Exception('S3Bucket: missing configuration key - ' . self::CONTAINER);
 		if (empty($cfg[self::REGION]))     throw new Exception('S3Bucket: missing configuration key - ' . self::REGION);
-		if (empty($cfg[self::API_KEY]))    throw new Exception('S3Bucket: missing configuration key - ' . self::API_KEY);
-		if (empty($cfg[self::API_SECRET])) throw new Exception('S3Bucket: missing configuration key - ' . self::API_SECRET);
+
+		if (empty($cfg[self::USE_ROLE]) || $cfg[self::USE_ROLE] === false) {
+			if (empty($cfg[self::API_KEY]))    throw new Exception('S3Bucket: missing configuration key - ' . self::API_KEY);
+			if (empty($cfg[self::API_SECRET])) throw new Exception('S3Bucket: missing configuration key - ' . self::API_SECRET);
+		}
 		$this->containerName = $this->config[self::CONTAINER];
 
 		$this->client = S3Client::factory(array(
-			'key'    => $this->config[self::API_KEY],
-			'secret' => $this->config[self::API_SECRET],
+			'key'    => $this->config[self::API_KEY] ? $this->config[self::API_KEY] : null,
+			'secret' => $this->config[self::API_SECRET] ? $this->config[self::API_SECRET] : null,
 			'region' => $this->config[self::REGION]
 		));
 	}

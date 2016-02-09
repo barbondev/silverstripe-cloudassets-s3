@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Bucket/container driver for Amazon S3
  * Based on markguinn/silverstripe-cloudassets-rackspace
@@ -7,9 +8,10 @@
  * @package cloudassets
  * @subpackage buckets
  */
-use Aws\Common\Aws;
-use Aws\Common\Enum\Size;
-use Aws\Common\Exception\MultipartUploadException;
+
+use Aws\Exception\MultipartUploadException;
+use Aws\Result;
+use Aws\S3\Exception\S3Exception;
 use Aws\S3\S3Client;
 use Aws\S3\MultipartUploader;
 
@@ -30,8 +32,9 @@ class S3Bucket extends CloudBucket
 	 * @param array  $cfg
 	 * @throws Exception
 	 */
-	public function __construct($path, array $cfg=array()) {
+	public function __construct($path, array $cfg = array()) {
 		parent::__construct($path, $cfg);
+
 		if (empty($cfg[self::CONTAINER]))  throw new Exception('S3Bucket: missing configuration key - ' . self::CONTAINER);
 		if (empty($cfg[self::REGION]))     throw new Exception('S3Bucket: missing configuration key - ' . self::REGION);
 
@@ -39,9 +42,10 @@ class S3Bucket extends CloudBucket
 			if (empty($cfg[self::API_KEY]))    throw new Exception('S3Bucket: missing configuration key - ' . self::API_KEY);
 			if (empty($cfg[self::API_SECRET])) throw new Exception('S3Bucket: missing configuration key - ' . self::API_SECRET);
 		}
+
 		$this->containerName = $this->config[self::CONTAINER];
 
-		$this->client = S3Client::factory(array(
+		$this->client = new S3Client(array(
 			'key'    => isset($this->config[self::API_KEY]) ? $this->config[self::API_KEY] : null,
 			'secret' => isset($this->config[self::API_SECRET]) ? $this->config[self::API_SECRET] : null,
 			'region' => $this->config[self::REGION],
@@ -58,7 +62,7 @@ class S3Bucket extends CloudBucket
 		$fp = fopen($f->getFullPath(), 'r');
 		if (!$fp) throw new Exception('Unable to open file: ' . $f->getFilename());
 
-		$uploader = new UploadBuilder($this->client, $f->getFullPath(), array(
+		$uploader = new MultipartUploader($this->client, $f->getFullPath(), array(
 			'bucket' => $this->containerName,
 			'key' => $this->getRelativeLinkFor($f)
 		));
@@ -152,7 +156,7 @@ class S3Bucket extends CloudBucket
 
 	/**
 	 * @param File|string $f
-	 * @return \Guzzle\Http\EntityBody
+	 * @return Result
 	 */
 	protected function getFileObjectFor(File $f) {
 		try {
@@ -161,7 +165,7 @@ class S3Bucket extends CloudBucket
 				'Key'    => $this->getRelativeLinkFor($f)
 			));
 			return $result;
-		} catch (\Aws\S3\Exception\NoSuchKeyException $e) {
+		} catch (S3Exception $e) {
 			return -1;
 		}
 	}

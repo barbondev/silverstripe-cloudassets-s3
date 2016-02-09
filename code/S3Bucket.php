@@ -70,7 +70,9 @@ class S3Bucket extends CloudBucket
 		try {
 			$uploader->upload();
 		} catch (MultipartUploadException $e) {
-
+			// warning: below exception gets silently swallowed!
+			error_log('S3Bucket: failed to put file: ' . $e->getPrevious()->getMessage());
+			throw new Exception('S3Bucket: failed to put file: ' . $e->getPrevious()->getMessage(), 0, $e);
 		}
 	}
 
